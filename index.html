@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QuickChat</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <!-- ============================
+       PAGE 1 — LOGIN
+  ============================= -->
+  <div id="page-login" class="page active">
+    <div class="auth-card">
+      <div class="auth-logo">💬</div>
+      <h1>QuickChat</h1>
+      <p class="auth-sub">Sign in to continue</p>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="Enter your username" maxlength="25" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password"/>
+      </div>
+
+      <div class="auth-error" id="login-error"></div>
+
+      <button class="btn-primary" onclick="doLogin()">Login</button>
+      <p class="auth-switch">Don't have an account? <span onclick="showPage('page-register')">Register</span></p>
+    </div>
+  </div>
+
+
+  <!-- ============================
+       PAGE 2 — REGISTER
+  ============================= -->
+  <div id="page-register" class="page">
+    <div class="auth-card">
+      <div class="auth-logo">👤</div>
+      <h1>Create Account</h1>
+      <p class="auth-sub">Join QuickChat today</p>
+
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Your display name" maxlength="25" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="reg-username" placeholder="Choose a username" maxlength="20" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Create a password"/>
+      </div>
+
+      <div class="auth-error" id="reg-error"></div>
+
+      <button class="btn-primary" onclick="doRegister()">Create Account</button>
+      <p class="auth-switch">Already have an account? <span onclick="showPage('page-login')">Login</span></p>
+    </div>
+  </div>
+
+
+  <!-- ============================
+       PAGE 3 — MAIN CHAT APP
+  ============================= -->
+  <div id="page-app" class="page">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <div class="sidebar-top">
+        <span class="app-name">💬 QuickChat</span>
+      </div>
+
+      <!-- Current user profile -->
+      <div class="my-profile" onclick="openProfile()">
+        <div class="profile-avatar-wrap">
+          <img id="sidebar-avatar" src="" alt="" class="profile-img"/>
+          <div class="profile-initials" id="sidebar-initials">U</div>
+          <div class="edit-overlay">✏️</div>
+        </div>
+        <div class="profile-info">
+          <div class="profile-name" id="sidebar-name">User</div>
+          <div class="profile-tag">● Online</div>
+        </div>
+      </div>
+
+      <!-- Rooms -->
+      <div class="section-label">ROOMS</div>
+      <div class="room-list">
+        <div class="room-item active" onclick="switchRoom('general', this)"># general</div>
+        <div class="room-item" onclick="switchRoom('tech', this)"># tech</div>
+        <div class="room-item" onclick="switchRoom('random', this)"># random</div>
+        <div class="room-item" onclick="switchRoom('aws-cloud', this)"># aws-cloud</div>
+      </div>
+
+      <!-- All registered users / online status -->
+      <div class="section-label">MEMBERS</div>
+      <div class="members-list" id="members-list">
+        <!-- filled by JS -->
+      </div>
+
+      <div class="sidebar-bottom">
+        <button class="logout-btn" onclick="doLogout()">🚪 Logout</button>
+      </div>
+
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area">
+
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <span class="room-hash">#</span>
+          <div>
+            <div class="room-name" id="room-title">general</div>
+            <div class="room-sub" id="room-sub">0 members online</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="messages-box" id="messages-box"></div>
+
+      <div class="typing-indicator" id="typing-indicator">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+        <span id="typing-text">Someone is typing...</span>
+      </div>
+
+      <div class="input-area">
+        <div class="emoji-panel" id="emoji-panel">
+          <span>😀</span><span>😂</span><span>😍</span><span>😎</span>
+          <span>😅</span><span>🤔</span><span>😢</span><span>😠</span>
+          <span>👍</span><span>👎</span><span>❤️</span><span>🔥</span>
+          <span>💯</span><span>🎉</span><span>🙏</span><span>😭</span>
+          <span>🚀</span><span>✅</span><span>⚡</span><span>💡</span>
+          <span>🛠️</span><span>☁️</span><span>💻</span><span>🌐</span>
+        </div>
+        <button class="emoji-btn" onclick="toggleEmoji()">😊</button>
+        <textarea id="msg-input" placeholder="Message #general..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ============================
+       MODAL — PROFILE EDITOR
+  ============================= -->
+  <div class="modal-overlay" id="profile-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Profile</h3>
+        <button class="modal-close" onclick="closeProfile()">✕</button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Avatar preview + upload -->
+        <div class="avatar-section">
+          <div class="avatar-preview-wrap">
+            <img id="modal-avatar-img" src="" alt="" class="avatar-preview-img"/>
+            <div class="avatar-preview-initials" id="modal-avatar-initials">U</div>
+          </div>
+          <div class="avatar-actions">
+            <label class="btn-upload" for="avatar-upload">📷 Change Photo</label>
+            <input type="file" id="avatar-upload" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)"/>
+            <button class="btn-remove-photo" onclick="removePhoto()">🗑️ Remove Photo</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Display Name</label>
+          <input type="text" id="modal-name" maxlength="25" placeholder="Your name"/>
+        </div>
+
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="modal-username" disabled style="opacity:0.5; cursor:not-allowed"/>
+        </div>
+
+        <div class="modal-error" id="modal-error"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeProfile()">Cancel</button>
+        <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="script.js"></script>
+</body>
+</html>
