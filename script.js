@@ -6,6 +6,9 @@ const USER_COLORS = [
   "#10b981", "#ef4444", "#3b82f6", "#ec4899",
 ];
 
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('mobile-open');
+}
 
 // ── LOCALSTORAGE HELPERS ───────────────────────────
 
