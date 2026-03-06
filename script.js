@@ -1,3 +1,5 @@
+const API_URL = "https://z8km24rfx8.execute-api.ap-south-1.amazonaws.com/prod";
+
 
 const USER_COLORS = [
   "#4f8ef7", "#f43f5e", "#f59e0b", "#8b5cf6",
@@ -49,10 +51,22 @@ function getRoomMessages(room) {
 function saveRoomMessages(room, msgs) {
   localStorage.setItem("qc_room_" + room, JSON.stringify(msgs));
 }
-function addMessage(room, msgObj) {
+async function addMessage(room, msgObj) {
+  // LocalStorage backup
   const msgs = getRoomMessages(room);
   msgs.push(msgObj);
   saveRoomMessages(room, msgs);
+
+  // AWS mein save karo
+  try {
+    await fetch(`${API_URL}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(msgObj),
+    });
+  } catch (err) {
+    console.warn("AWS error:", err);
+  }
 }
 
 
@@ -538,4 +552,30 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("beforeunload", () => {
     if (currentUser) markOffline(currentUser.username);
   });
+  setInterval(async () => {
+  if (!currentUser) return;
+  try {
+    const res  = await fetch(`${API_URL}/messages?room=${currentRoom}`);
+    const data = await res.json();
+    const existing    = getRoomMessages(currentRoom);
+    const existingIds = new Set(existing.map(m => m.messageId));
+
+    let newMsgs = false;
+    data.messages.forEach(m => {
+      if (!existingIds.has(m.messageId) && m.sender !== currentUser.username) {
+        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        renderMessage(m.sender, m.senderName, m.text, time, false, m.avatar, m.color);
+        existing.push({ ...m, time });
+        newMsgs = true;
+      }
+    });
+
+    if (newMsgs) {
+      saveRoomMessages(currentRoom, existing);
+      scrollBottom();
+    }
+  } catch (err) {
+    console.warn("Polling error:", err);
+  }
+}, 3000);
 });
