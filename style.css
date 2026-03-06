@@ -338,13 +338,18 @@ body {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  .mobile-menu-btn {
+  gap: 10px;
+}
+
+.mobile-menu-btn {
+  display: none;
   background: none;
   border: none;
   font-size: 22px;
   cursor: pointer;
-  margin-right: 10px;
-}
+  color: #333;
+  padding: 4px;
+  flex-shrink: 0;
 }
 
 .room-hash { font-size: 22px; color: #4f8ef7; font-weight: 800; margin-right: 10px; }
