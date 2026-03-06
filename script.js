@@ -298,19 +298,20 @@ function sendMessage() {
   input.style.height = "auto";
 
   const time = getTime();
+  const messageId = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  
   const msgObj = {
+    messageId,                          // ← ye add karo
     sender:     currentUser.username,
     senderName: currentUser.name,
     text,
     time,
+    room:   currentRoom,               // ← ye bhi add karo
     avatar: currentUser.avatar || "",
     color:  currentUser.color,
   };
 
-  // Save to localStorage
   addMessage(currentRoom, msgObj);
-
-  // Render on screen
   renderMessage(msgObj.sender, msgObj.senderName, msgObj.text, msgObj.time, true, msgObj.avatar, msgObj.color);
   scrollBottom();
 }
