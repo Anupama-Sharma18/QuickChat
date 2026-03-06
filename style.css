@@ -681,23 +681,54 @@ body {
 }
 
 /* ── RESPONSIVE ─────────────────────────────── */
-@media (max-width: 680px) {
+
   /* .sidebar { display: none; } */
-  .sidebar { 
-  display: none;
-  position: fixed;
-  z-index: 50;
-  height: 100vh;
-  width: 100%;
-}
+  @media (max-width: 680px) {
+  .sidebar {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 50;
+    height: 100vh;
+    width: 80%;
+    max-width: 300px;
+  }
 
-.sidebar.mobile-open {
-  display: flex !important;
-}
+  .sidebar.mobile-open {
+    display: flex;
+  }
 
-.mobile-menu-btn {
-  display: flex;
-}
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 49;
+  }
+
+  .sidebar-overlay.show {
+    display: block;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
   .modal { width: 95vw; }
+
+  .msg-content { max-width: 75%; }
+
+  /* Input box fix — keyboard ke upar rahe */
+  #page-app {
+    height: 100dvh;
+  }
+
+  .input-area {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    z-index: 10;
+  }
+
 }
 
