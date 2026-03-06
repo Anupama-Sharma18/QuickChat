@@ -6,8 +6,15 @@ const USER_COLORS = [
   "#10b981", "#ef4444", "#3b82f6", "#ec4899",
 ];
 
+// function toggleSidebar() {
+//   document.querySelector('.sidebar').classList.toggle('mobile-open');
+// }
+
 function toggleSidebar() {
-  document.querySelector('.sidebar').classList.toggle('mobile-open');
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('mobile-open');
+  overlay.classList.toggle('show');
 }
 
 // ── LOCALSTORAGE HELPERS ───────────────────────────
