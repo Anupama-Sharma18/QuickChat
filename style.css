@@ -338,6 +338,13 @@ body {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  .mobile-menu-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  margin-right: 10px;
+}
 }
 
 .room-hash { font-size: 22px; color: #4f8ef7; font-weight: 800; margin-right: 10px; }
@@ -675,6 +682,22 @@ body {
 
 /* ── RESPONSIVE ─────────────────────────────── */
 @media (max-width: 680px) {
-  .sidebar { display: none; }
+  /* .sidebar { display: none; } */
+  .sidebar { 
+  display: none;
+  position: fixed;
+  z-index: 50;
+  height: 100vh;
+  width: 100%;
+}
+
+.sidebar.mobile-open {
+  display: flex !important;
+}
+
+.mobile-menu-btn {
+  display: flex;
+}
   .modal { width: 95vw; }
 }
+
