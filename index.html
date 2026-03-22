@@ -88,6 +88,7 @@
           <div class="profile-name" id="sidebar-name">User</div>
           <div class="profile-tag">● Online</div>
         </div>
+        
       </div>
 
       <!-- Rooms -->
@@ -111,10 +112,13 @@
 
     </div>
 
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
     <!-- CHAT AREA -->
     <div class="chat-area">
 
       <div class="chat-header">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
         <div class="chat-header-left">
           <span class="room-hash">#</span>
           <div>
