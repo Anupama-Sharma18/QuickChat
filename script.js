@@ -1,4 +1,4 @@
-const API_URL = "https://z8km24rfx8.execute-api.ap-south-1.amazonaws.com/prod";
+loginconst API_URL = "https://z8km24rfx8.execute-api.ap-south-1.amazonaws.com/prod";
 
 
 const USER_COLORS = [
@@ -113,16 +113,9 @@ function doRegister() {
     color: USER_COLORS[colorIndex],
   };
   saveUsers(users);
-
-  // ✅ FIX: Register ke baad login page pe bhejo, auto-login nahi
-  showPage("page-login");
-  document.getElementById("login-username").value = username;
-  document.getElementById("login-error").textContent = "";
-
-  // Green success message
-  const loginErrEl = document.getElementById("login-error");
-  loginErrEl.style.color = "#22c55e";
-  loginErrEl.textContent = "✅ Account created! Please login now.";
+  
+  // Auto login after register
+  loginUser(username);
 }
 
 
