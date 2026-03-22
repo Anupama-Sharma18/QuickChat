@@ -271,22 +271,60 @@ function switchRoom(roomName, el) {
 
 
 // ── LOAD ROOM MESSAGES ─────────────────────────────
-function loadRoomMessages(room) {
-  const box  = document.getElementById("messages-box");
-  box.innerHTML = "";
+// function loadRoomMessages(room) {
+//   const box  = document.getElementById("messages-box");
+//   box.innerHTML = "";
 
+//   addDateDivider("Today");
+
+//   const msgs = getRoomMessages(room);
+//   msgs.forEach(m => {
+//     const isSent = m.sender === currentUser.username;
+//     renderMessage(m.sender, m.senderName, m.text, m.time, isSent, m.avatar, m.color);
+//   });
+
+//   addSysMsg(`${currentUser.name} joined #${room}`);
+//   scrollBottom();
+// }
+
+// Replace your existing loadRoomMessages function with this
+async function loadRoomMessages(room) {
+  const box = document.getElementById("messages-box");
+  box.innerHTML = "";
   addDateDivider("Today");
 
-  const msgs = getRoomMessages(room);
-  msgs.forEach(m => {
+  // First show localStorage messages immediately
+  const localMsgs = getRoomMessages(room);
+  localMsgs.forEach(m => {
     const isSent = m.sender === currentUser.username;
     renderMessage(m.sender, m.senderName, m.text, m.time, isSent, m.avatar, m.color);
   });
 
+  // Then fetch from AWS and add any missing ones
+  try {
+    const res  = await fetch(`${API_URL}/messages?room=${room}`);
+    const data = await res.json();
+    const existingIds = new Set(localMsgs.map(m => m.messageId));
+
+    let added = false;
+    (data.messages || []).forEach(m => {
+      if (!existingIds.has(m.messageId)) {
+        const isSent = m.sender === currentUser.username;
+        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        renderMessage(m.sender, m.senderName, m.text, time, isSent, m.avatar, m.color);
+        localMsgs.push({ ...m, time });
+        added = true;
+      }
+    });
+
+    if (added) saveRoomMessages(room, localMsgs);
+  } catch (err) {
+    console.warn("Could not fetch from AWS:", err);
+  }
+
   addSysMsg(`${currentUser.name} joined #${room}`);
   scrollBottom();
 }
-
 
 // ── SEND MESSAGE ───────────────────────────────────
 function sendMessage() {
