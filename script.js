@@ -1,9 +1,21 @@
+const API_URL = "https://z8km24rfx8.execute-api.ap-south-1.amazonaws.com/prod";
+
 
 const USER_COLORS = [
   "#4f8ef7", "#f43f5e", "#f59e0b", "#8b5cf6",
   "#10b981", "#ef4444", "#3b82f6", "#ec4899",
 ];
 
+// function toggleSidebar() {
+//   document.querySelector('.sidebar').classList.toggle('mobile-open');
+// }
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.toggle('mobile-open');
+  overlay.classList.toggle('show');
+}
 
 // ── LOCALSTORAGE HELPERS ───────────────────────────
 
@@ -49,10 +61,22 @@ function getRoomMessages(room) {
 function saveRoomMessages(room, msgs) {
   localStorage.setItem("qc_room_" + room, JSON.stringify(msgs));
 }
-function addMessage(room, msgObj) {
+async function addMessage(room, msgObj) {
+  // LocalStorage backup
   const msgs = getRoomMessages(room);
   msgs.push(msgObj);
   saveRoomMessages(room, msgs);
+
+  // AWS mein save karo
+  try {
+    await fetch(`${API_URL}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(msgObj),
+    });
+  } catch (err) {
+    console.warn("AWS error:", err);
+  }
 }
 
 
@@ -247,22 +271,60 @@ function switchRoom(roomName, el) {
 
 
 // ── LOAD ROOM MESSAGES ─────────────────────────────
-function loadRoomMessages(room) {
-  const box  = document.getElementById("messages-box");
-  box.innerHTML = "";
+// function loadRoomMessages(room) {
+//   const box  = document.getElementById("messages-box");
+//   box.innerHTML = "";
 
+//   addDateDivider("Today");
+
+//   const msgs = getRoomMessages(room);
+//   msgs.forEach(m => {
+//     const isSent = m.sender === currentUser.username;
+//     renderMessage(m.sender, m.senderName, m.text, m.time, isSent, m.avatar, m.color);
+//   });
+
+//   addSysMsg(`${currentUser.name} joined #${room}`);
+//   scrollBottom();
+// }
+
+// Replace your existing loadRoomMessages function with this
+async function loadRoomMessages(room) {
+  const box = document.getElementById("messages-box");
+  box.innerHTML = "";
   addDateDivider("Today");
 
-  const msgs = getRoomMessages(room);
-  msgs.forEach(m => {
+  // First show localStorage messages immediately
+  const localMsgs = getRoomMessages(room);
+  localMsgs.forEach(m => {
     const isSent = m.sender === currentUser.username;
     renderMessage(m.sender, m.senderName, m.text, m.time, isSent, m.avatar, m.color);
   });
 
+  // Then fetch from AWS and add any missing ones
+  try {
+    const res  = await fetch(`${API_URL}/messages?room=${room}`);
+    const data = await res.json();
+    const existingIds = new Set(localMsgs.map(m => m.messageId));
+
+    let added = false;
+    (data.messages || []).forEach(m => {
+      if (!existingIds.has(m.messageId)) {
+        const isSent = m.sender === currentUser.username;
+        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        renderMessage(m.sender, m.senderName, m.text, time, isSent, m.avatar, m.color);
+        localMsgs.push({ ...m, time });
+        added = true;
+      }
+    });
+
+    if (added) saveRoomMessages(room, localMsgs);
+  } catch (err) {
+    console.warn("Could not fetch from AWS:", err);
+  }
+
   addSysMsg(`${currentUser.name} joined #${room}`);
   scrollBottom();
 }
-
 
 // ── SEND MESSAGE ───────────────────────────────────
 function sendMessage() {
@@ -274,19 +336,20 @@ function sendMessage() {
   input.style.height = "auto";
 
   const time = getTime();
+  const messageId = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  
   const msgObj = {
+    messageId,                          // ← ye add karo
     sender:     currentUser.username,
     senderName: currentUser.name,
     text,
     time,
+    room:   currentRoom,               // ← ye bhi add karo
     avatar: currentUser.avatar || "",
     color:  currentUser.color,
   };
 
-  // Save to localStorage
   addMessage(currentRoom, msgObj);
-
-  // Render on screen
   renderMessage(msgObj.sender, msgObj.senderName, msgObj.text, msgObj.time, true, msgObj.avatar, msgObj.color);
   scrollBottom();
 }
@@ -538,4 +601,30 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("beforeunload", () => {
     if (currentUser) markOffline(currentUser.username);
   });
+  setInterval(async () => {
+  if (!currentUser) return;
+  try {
+    const res  = await fetch(`${API_URL}/messages?room=${currentRoom}`);
+    const data = await res.json();
+    const existing    = getRoomMessages(currentRoom);
+    const existingIds = new Set(existing.map(m => m.messageId));
+
+    let newMsgs = false;
+    data.messages.forEach(m => {
+      if (!existingIds.has(m.messageId) && m.sender !== currentUser.username) {
+        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        renderMessage(m.sender, m.senderName, m.text, time, false, m.avatar, m.color);
+        existing.push({ ...m, time });
+        newMsgs = true;
+      }
+    });
+
+    if (newMsgs) {
+      saveRoomMessages(currentRoom, existing);
+      scrollBottom();
+    }
+  } catch (err) {
+    console.warn("Polling error:", err);
+  }
+}, 3000);
 });
