@@ -124,17 +124,7 @@ function doRegister() {
   saveUsers(users);
 
   // Auto login after register
-  // Registration ke baad login page pe bhejo
-showPage("page-login");
-
-// // Username prefill karo taaki user ko dobara type na karna pade
-// document.getElementById("login-username").value = username;
-// document.getElementById("login-error").textContent = "";
-
-// // Success message dikhao
-// const errEl = document.getElementById("login-error");
-// errEl.style.color = "#22c55e";
-// errEl.textContent = "✅ Account created! Please login now.";
+  loginUser(username);
 }
 
 
