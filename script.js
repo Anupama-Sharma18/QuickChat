@@ -566,47 +566,47 @@ document.addEventListener("DOMContentLoaded", () => {
     if (currentUser) markOffline(currentUser.username);
   });
 
-  // ── POLLING — har 3 second mein AWS se naye messages fetch karo ──
-  setInterval(async () => {
-    if (!currentUser) return;
-    try {
-      const res  = await fetch(`${API_URL}/messages?room=${currentRoom}`);
-      const data = await res.json();
-      if (!data.messages || data.messages.length === 0) return;
+  //// ── POLLING — har 3 second mein AWS se naye messages fetch karo ──
+  // setInterval(async () => {
+  //   if (!currentUser) return;
+  //   try {
+  //     const res  = await fetch(`${API_URL}/messages?room=${currentRoom}`);
+  //     const data = await res.json();
+  //     if (!data.messages || data.messages.length === 0) return;
 
-      // ✅ FIX: localStorage ke IDs ki jagah DOM pe rendered message IDs check karo
-      // Isse doosre users ke messages bhi correctly aayenge
-      const renderedIds = new Set(
-        Array.from(document.querySelectorAll(".msg-row[data-msg-id]"))
-             .map(el => el.dataset.msgId)
-             .filter(Boolean)
-      );
+  //     // ✅ FIX: localStorage ke IDs ki jagah DOM pe rendered message IDs check karo
+  //     // Isse doosre users ke messages bhi correctly aayenge
+  //     const renderedIds = new Set(
+  //       Array.from(document.querySelectorAll(".msg-row[data-msg-id]"))
+  //            .map(el => el.dataset.msgId)
+  //            .filter(Boolean)
+  //     );
 
-      let hasNew = false;
+  //     let hasNew = false;
 
-      data.messages.forEach(m => {
-        if (!renderedIds.has(m.messageId)) {
-          const isSent = m.sender === currentUser.username;
-          const time   = m.time || new Date(m.timestamp).toLocaleTimeString([], {
-            hour: "2-digit", minute: "2-digit"
-          });
-          renderMessage(m.sender, m.senderName, m.text, time, isSent, m.avatar, m.color, m.messageId);
-          hasNew = true;
+  //     data.messages.forEach(m => {
+  //       if (!renderedIds.has(m.messageId)) {
+  //         const isSent = m.sender === currentUser.username;
+  //         const time   = m.time || new Date(m.timestamp).toLocaleTimeString([], {
+  //           hour: "2-digit", minute: "2-digit"
+  //         });
+  //         renderMessage(m.sender, m.senderName, m.text, time, isSent, m.avatar, m.color, m.messageId);
+  //         hasNew = true;
 
-          // localStorage mein bhi save karo
-          const local = getRoomMessages(currentRoom);
-          if (!local.find(x => x.messageId === m.messageId)) {
-            local.push({ ...m, time });
-            saveRoomMessages(currentRoom, local);
-          }
-        }
-      });
+  //         // localStorage mein bhi save karo
+  //         const local = getRoomMessages(currentRoom);
+  //         if (!local.find(x => x.messageId === m.messageId)) {
+  //           local.push({ ...m, time });
+  //           saveRoomMessages(currentRoom, local);
+  //         }
+  //       }
+  //     });
 
-      if (hasNew) scrollBottom();
+  //     if (hasNew) scrollBottom();
 
-    } catch (err) {
-      console.warn("Polling error:", err);
-    }
-  }, 3000);
+  //   } catch (err) {
+  //     console.warn("Polling error:", err);
+  //   }
+  // }, 3000);
 
 });
