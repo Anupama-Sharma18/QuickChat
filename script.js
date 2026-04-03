@@ -607,6 +607,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.warn("Polling error:", err);
     }
-  }, 3000);
+  }, 5000);
 
 });
