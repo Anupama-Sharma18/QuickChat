@@ -6,10 +6,6 @@ const USER_COLORS = [
   "#10b981", "#ef4444", "#3b82f6", "#ec4899",
 ];
 
-// function toggleSidebar() {
-//   document.querySelector('.sidebar').classList.toggle('mobile-open');
-// }
-
 function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.getElementById('sidebar-overlay');
@@ -19,7 +15,6 @@ function toggleSidebar() {
 
 // ── LOCALSTORAGE HELPERS ───────────────────────────
 
-// All registered users  →  { username: { name, password, avatar, color } }
 function getUsers() {
   return JSON.parse(localStorage.getItem("qc_users") || "{}");
 }
@@ -27,7 +22,6 @@ function saveUsers(users) {
   localStorage.setItem("qc_users", JSON.stringify(users));
 }
 
-// Currently logged-in username
 function getLoggedIn() {
   return localStorage.getItem("qc_loggedin") || null;
 }
@@ -38,7 +32,6 @@ function clearLoggedIn() {
   localStorage.removeItem("qc_loggedin");
 }
 
-// Online users set  →  array of usernames
 function getOnlineUsers() {
   return JSON.parse(localStorage.getItem("qc_online") || "[]");
 }
@@ -54,13 +47,13 @@ function markOffline(username) {
   setOnlineUsers(list);
 }
 
-// Messages per room  →  array of { sender, text, time }
 function getRoomMessages(room) {
   return JSON.parse(localStorage.getItem("qc_room_" + room) || "[]");
 }
 function saveRoomMessages(room, msgs) {
   localStorage.setItem("qc_room_" + room, JSON.stringify(msgs));
 }
+
 async function addMessage(room, msgObj) {
   // LocalStorage backup
   const msgs = getRoomMessages(room);
@@ -81,7 +74,7 @@ async function addMessage(room, msgObj) {
 
 
 // ── STATE ──────────────────────────────────────────
-let currentUser = null;   // logged-in user object + username
+let currentUser = null;
 let currentRoom = "general";
 
 
@@ -101,30 +94,35 @@ function doRegister() {
 
   errEl.textContent = "";
 
-  if (!name)                       { errEl.textContent = "Please enter your name."; return; }
-  if (!username)                   { errEl.textContent = "Please choose a username."; return; }
-  if (username.length < 3)         { errEl.textContent = "Username must be at least 3 characters."; return; }
+  if (!name)                           { errEl.textContent = "Please enter your name."; return; }
+  if (!username)                       { errEl.textContent = "Please choose a username."; return; }
+  if (username.length < 3)             { errEl.textContent = "Username must be at least 3 characters."; return; }
   if (!/^[a-z0-9_]+$/.test(username)) { errEl.textContent = "Username: only letters, numbers, underscore."; return; }
-  if (!password)                   { errEl.textContent = "Please enter a password."; return; }
-  if (password.length < 4)         { errEl.textContent = "Password must be at least 4 characters."; return; }
+  if (!password)                       { errEl.textContent = "Please enter a password."; return; }
+  if (password.length < 4)             { errEl.textContent = "Password must be at least 4 characters."; return; }
 
   const users = getUsers();
-  if (users[username])             { errEl.textContent = "Username already taken!"; return; }
+  if (users[username])                 { errEl.textContent = "Username already taken!"; return; }
 
-  // Pick a color for this user
   const colorIndex = Object.keys(users).length % USER_COLORS.length;
 
-  // Save new user
   users[username] = {
     name,
     password,
-    avatar: "",         // base64 photo (empty = use initials)
+    avatar: "",
     color: USER_COLORS[colorIndex],
   };
   saveUsers(users);
 
-  // Auto login after register
-  loginUser(username);
+  // ✅ FIX: Register ke baad login page pe bhejo, auto-login nahi
+  showPage("page-login");
+  document.getElementById("login-username").value = username;
+  document.getElementById("login-error").textContent = "";
+
+  // Green success message
+  const loginErrEl = document.getElementById("login-error");
+  loginErrEl.style.color = "#22c55e";
+  loginErrEl.textContent = "✅ Account created! Please login now.";
 }
 
 
@@ -135,6 +133,7 @@ function doLogin() {
   const errEl    = document.getElementById("login-error");
 
   errEl.textContent = "";
+  errEl.style.color = "#ef4444"; // reset to red for errors
 
   if (!username) { errEl.textContent = "Please enter your username."; return; }
   if (!password) { errEl.textContent = "Please enter your password."; return; }
@@ -159,12 +158,12 @@ function doLogout() {
   clearLoggedIn();
   currentUser = null;
 
-  // Clear inputs
   ["login-username","login-password","reg-name","reg-username","reg-password"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
   document.getElementById("login-error").textContent = "";
+  document.getElementById("login-error").style.color = "#ef4444";
   document.getElementById("reg-error").textContent   = "";
 
   showPage("page-login");
@@ -177,16 +176,14 @@ function initApp(username) {
   const user  = users[username];
   currentUser = { username, ...user };
 
-  // Sidebar update
   updateSidebarProfile();
   renderMembersList();
 
-  // Load default room
   currentRoom = "general";
   document.querySelectorAll(".room-item").forEach(r => r.classList.remove("active"));
   document.querySelectorAll(".room-item")[0].classList.add("active");
-  document.getElementById("room-title").textContent      = "general";
-  document.getElementById("msg-input").placeholder       = "Message #general...";
+  document.getElementById("room-title").textContent = "general";
+  document.getElementById("msg-input").placeholder  = "Message #general...";
 
   loadRoomMessages("general");
   showPage("page-app");
@@ -208,23 +205,19 @@ function updateSidebarProfile() {
     document.getElementById("sidebar-initials").style.display = "flex";
   }
 
-  // Initials bg color
   document.getElementById("sidebar-initials").style.background = currentUser.color;
 }
 
 
 // ── MEMBERS LIST ───────────────────────────────────
 function renderMembersList() {
-  const users   = getUsers();
-  const online  = getOnlineUsers();
-  const list    = document.getElementById("members-list");
+  const users  = getUsers();
+  const online = getOnlineUsers();
+  const list   = document.getElementById("members-list");
   list.innerHTML = "";
 
-  // Sort: online first, then offline
   const sorted = Object.keys(users).sort((a, b) => {
-    const aOn = online.includes(a) ? 0 : 1;
-    const bOn = online.includes(b) ? 0 : 1;
-    return aOn - bOn;
+    return (online.includes(a) ? 0 : 1) - (online.includes(b) ? 0 : 1);
   });
 
   sorted.forEach(uname => {
@@ -235,7 +228,6 @@ function renderMembersList() {
     const item = document.createElement("div");
     item.className = `member-item ${isOnline ? "is-online" : ""}`;
 
-    // Avatar
     const avatarHtml = u.avatar
       ? `<img class="member-img" src="${u.avatar}" style="display:block"/>
          <div class="member-initials" style="background:${u.color};display:none">${u.name[0].toUpperCase()}</div>`
@@ -252,7 +244,6 @@ function renderMembersList() {
     list.appendChild(item);
   });
 
-  // Update room subtitle
   const onlineCount = online.length;
   document.getElementById("room-sub").textContent = `${onlineCount} member${onlineCount !== 1 ? "s" : ""} online`;
 }
@@ -263,44 +254,27 @@ function switchRoom(roomName, el) {
   currentRoom = roomName;
   document.querySelectorAll(".room-item").forEach(r => r.classList.remove("active"));
   el.classList.add("active");
-  document.getElementById("room-title").textContent  = roomName;
-  document.getElementById("msg-input").placeholder   = `Message #${roomName}...`;
+  document.getElementById("room-title").textContent = roomName;
+  document.getElementById("msg-input").placeholder  = `Message #${roomName}...`;
   hideTyping();
   loadRoomMessages(roomName);
 }
 
 
 // ── LOAD ROOM MESSAGES ─────────────────────────────
-// function loadRoomMessages(room) {
-//   const box  = document.getElementById("messages-box");
-//   box.innerHTML = "";
-
-//   addDateDivider("Today");
-
-//   const msgs = getRoomMessages(room);
-//   msgs.forEach(m => {
-//     const isSent = m.sender === currentUser.username;
-//     renderMessage(m.sender, m.senderName, m.text, m.time, isSent, m.avatar, m.color);
-//   });
-
-//   addSysMsg(`${currentUser.name} joined #${room}`);
-//   scrollBottom();
-// }
-
-// Replace your existing loadRoomMessages function with this
 async function loadRoomMessages(room) {
   const box = document.getElementById("messages-box");
   box.innerHTML = "";
   addDateDivider("Today");
 
-  // First show localStorage messages immediately
+  // Pehle localStorage se dikhao (fast)
   const localMsgs = getRoomMessages(room);
   localMsgs.forEach(m => {
     const isSent = m.sender === currentUser.username;
-    renderMessage(m.sender, m.senderName, m.text, m.time, isSent, m.avatar, m.color);
+    renderMessage(m.sender, m.senderName, m.text, m.time, isSent, m.avatar, m.color, m.messageId);
   });
 
-  // Then fetch from AWS and add any missing ones
+  // Phir AWS se fetch karo aur jo missing hain wo add karo
   try {
     const res  = await fetch(`${API_URL}/messages?room=${room}`);
     const data = await res.json();
@@ -310,8 +284,8 @@ async function loadRoomMessages(room) {
     (data.messages || []).forEach(m => {
       if (!existingIds.has(m.messageId)) {
         const isSent = m.sender === currentUser.username;
-        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        renderMessage(m.sender, m.senderName, m.text, time, isSent, m.avatar, m.color);
+        const time   = m.time || new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        renderMessage(m.sender, m.senderName, m.text, time, isSent, m.avatar, m.color, m.messageId);
         localMsgs.push({ ...m, time });
         added = true;
       }
@@ -326,6 +300,7 @@ async function loadRoomMessages(room) {
   scrollBottom();
 }
 
+
 // ── SEND MESSAGE ───────────────────────────────────
 function sendMessage() {
   const input = document.getElementById("msg-input");
@@ -335,34 +310,37 @@ function sendMessage() {
   input.value = "";
   input.style.height = "auto";
 
-  const time = getTime();
+  const time      = getTime();
   const messageId = Date.now() + "-" + Math.random().toString(36).slice(2, 8);
-  
+
   const msgObj = {
-    messageId,                          // ← ye add karo
+    messageId,
     sender:     currentUser.username,
     senderName: currentUser.name,
     text,
     time,
-    room:   currentRoom,               // ← ye bhi add karo
+    room:   currentRoom,
     avatar: currentUser.avatar || "",
     color:  currentUser.color,
   };
 
   addMessage(currentRoom, msgObj);
-  renderMessage(msgObj.sender, msgObj.senderName, msgObj.text, msgObj.time, true, msgObj.avatar, msgObj.color);
+
+  // ✅ FIX: messageId pass karo renderMessage ko
+  renderMessage(msgObj.sender, msgObj.senderName, msgObj.text, msgObj.time, true, msgObj.avatar, msgObj.color, msgObj.messageId);
   scrollBottom();
 }
 
 
 // ── RENDER ONE MESSAGE ─────────────────────────────
-function renderMessage(sender, senderName, text, time, isSent, avatar, color) {
+// ✅ FIX: msgId parameter add kiya — DOM element pe store hoga duplicate check ke liye
+function renderMessage(sender, senderName, text, time, isSent, avatar, color, msgId = "") {
   const box = document.getElementById("messages-box");
   const row = document.createElement("div");
-  row.className = `msg-row ${isSent ? "sent" : "recv"}`;
+  row.className      = `msg-row ${isSent ? "sent" : "recv"}`;
+  row.dataset.msgId  = msgId; // ← polling duplicate check ke liye
 
-  // Avatar HTML
-  const initial = (senderName || sender)[0].toUpperCase();
+  const initial    = (senderName || sender)[0].toUpperCase();
   const avatarHtml = avatar
     ? `<img class="msg-avatar-img" src="${avatar}" style="display:block"/>
        <div class="msg-avatar-initials" style="background:${color};display:none">${initial}</div>`
@@ -383,25 +361,24 @@ function renderMessage(sender, senderName, text, time, isSent, avatar, color) {
 
 // ── PROFILE MODAL ──────────────────────────────────
 function openProfile() {
-  // Fill modal with current data
-  document.getElementById("modal-name").value     = currentUser.name;
-  document.getElementById("modal-username").value = currentUser.username;
+  document.getElementById("modal-name").value        = currentUser.name;
+  document.getElementById("modal-username").value    = currentUser.username;
   document.getElementById("modal-error").textContent = "";
 
   const previewImg      = document.getElementById("modal-avatar-img");
   const previewInitials = document.getElementById("modal-avatar-initials");
 
   if (currentUser.avatar) {
-    previewImg.src            = currentUser.avatar;
-    previewImg.style.display  = "block";
+    previewImg.src              = currentUser.avatar;
+    previewImg.style.display    = "block";
     previewInitials.style.display = "none";
   } else {
-    previewImg.style.display  = "none";
+    previewImg.style.display    = "none";
     previewInitials.style.display = "flex";
   }
 
-  previewInitials.textContent        = currentUser.name[0].toUpperCase();
-  previewInitials.style.background   = currentUser.color;
+  previewInitials.textContent      = currentUser.name[0].toUpperCase();
+  previewInitials.style.background = currentUser.color;
 
   document.getElementById("profile-modal").classList.add("open");
 }
@@ -414,13 +391,11 @@ function handleAvatarUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  // Only images
   if (!file.type.startsWith("image/")) {
     document.getElementById("modal-error").textContent = "Please select an image file.";
     return;
   }
 
-  // Max 2MB
   if (file.size > 2 * 1024 * 1024) {
     document.getElementById("modal-error").textContent = "Image too large. Max 2MB.";
     return;
@@ -428,41 +403,34 @@ function handleAvatarUpload(event) {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    const base64 = e.target.result;
-
-    // Show preview in modal
-    const previewImg      = document.getElementById("modal-avatar-img");
-    const previewInitials = document.getElementById("modal-avatar-initials");
-    previewImg.src            = base64;
-    previewImg.style.display  = "block";
-    previewInitials.style.display = "none";
-
-    // Temporarily store in modal (saved only on Save Changes)
-    document.getElementById("modal-avatar-img").dataset.newAvatar = base64;
+    const base64      = e.target.result;
+    const previewImg  = document.getElementById("modal-avatar-img");
+    const previewInit = document.getElementById("modal-avatar-initials");
+    previewImg.src              = base64;
+    previewImg.style.display    = "block";
+    previewInit.style.display   = "none";
+    previewImg.dataset.newAvatar = base64;
   };
   reader.readAsDataURL(file);
 }
 
 function removePhoto() {
-  const previewImg      = document.getElementById("modal-avatar-img");
-  const previewInitials = document.getElementById("modal-avatar-initials");
-
-  previewImg.src            = "";
-  previewImg.style.display  = "none";
+  const previewImg  = document.getElementById("modal-avatar-img");
+  const previewInit = document.getElementById("modal-avatar-initials");
+  previewImg.src               = "";
+  previewImg.style.display     = "none";
   previewImg.dataset.newAvatar = "REMOVE";
-  previewInitials.style.display = "flex";
+  previewInit.style.display    = "flex";
 }
 
 function saveProfile() {
-  const newName  = document.getElementById("modal-name").value.trim();
-  const errEl    = document.getElementById("modal-error");
+  const newName = document.getElementById("modal-name").value.trim();
+  const errEl   = document.getElementById("modal-error");
 
   errEl.textContent = "";
-
   if (!newName) { errEl.textContent = "Name cannot be empty."; return; }
 
-  // Avatar: check if changed
-  const previewImg  = document.getElementById("modal-avatar-img");
+  const previewImg    = document.getElementById("modal-avatar-img");
   const newAvatarFlag = previewImg.dataset.newAvatar;
 
   let newAvatar = currentUser.avatar;
@@ -472,21 +440,17 @@ function saveProfile() {
     newAvatar = newAvatarFlag;
   }
 
-  // Update localStorage
   const users = getUsers();
   users[currentUser.username].name   = newName;
   users[currentUser.username].avatar = newAvatar;
   saveUsers(users);
 
-  // Update currentUser in memory
   currentUser.name   = newName;
   currentUser.avatar = newAvatar;
 
-  // Update UI
   updateSidebarProfile();
   renderMembersList();
 
-  // Clean up
   previewImg.dataset.newAvatar = "";
   document.getElementById("avatar-upload").value = "";
 
@@ -494,7 +458,7 @@ function saveProfile() {
 }
 
 
-// ── TYPING (show/hide, not automatic) ─────────────
+// ── TYPING ─────────────────────────────────────────
 function showTyping() {
   document.getElementById("typing-indicator").style.display = "flex";
 }
@@ -512,21 +476,21 @@ function toggleEmoji() {
 
 // ── HELPERS ────────────────────────────────────────
 function addDateDivider(label) {
-  const el = document.createElement("div");
+  const el       = document.createElement("div");
   el.className   = "date-divider";
   el.textContent = label;
   document.getElementById("messages-box").appendChild(el);
 }
 
 function addSysMsg(text) {
-  const el = document.createElement("div");
+  const el       = document.createElement("div");
   el.className   = "sys-msg";
   el.textContent = `— ${text} —`;
   document.getElementById("messages-box").appendChild(el);
 }
 
 function scrollBottom() {
-  const b = document.getElementById("messages-box");
+  const b   = document.getElementById("messages-box");
   b.scrollTop = b.scrollHeight;
 }
 
@@ -549,14 +513,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Emoji click → insert into input
   document.getElementById("emoji-panel").addEventListener("click", e => {
     if (e.target.tagName === "SPAN") {
-      const input = document.getElementById("msg-input");
-      input.value += e.target.textContent.trim();
+      const input   = document.getElementById("msg-input");
+      input.value  += e.target.textContent.trim();
       input.focus();
       document.getElementById("emoji-panel").style.display = "none";
     }
   });
 
-  // Close emoji panel when clicking outside
+  // Close emoji panel on outside click
   document.addEventListener("click", e => {
     if (!e.target.closest(".emoji-btn") && !e.target.closest(".emoji-panel")) {
       document.getElementById("emoji-panel").style.display = "none";
@@ -592,39 +556,57 @@ document.addEventListener("DOMContentLoaded", () => {
     loginUser(saved);
   }
 
-  // Refresh members list every 5s (so online/offline updates if multiple tabs)
+  // Members list refresh every 5s
   setInterval(() => {
     if (currentUser) renderMembersList();
   }, 5000);
 
-  // Mark offline on tab/window close
+  // Mark offline on tab close
   window.addEventListener("beforeunload", () => {
     if (currentUser) markOffline(currentUser.username);
   });
+
+  // ── POLLING — har 3 second mein AWS se naye messages fetch karo ──
   setInterval(async () => {
-  if (!currentUser) return;
-  try {
-    const res  = await fetch(`${API_URL}/messages?room=${currentRoom}`);
-    const data = await res.json();
-    const existing    = getRoomMessages(currentRoom);
-    const existingIds = new Set(existing.map(m => m.messageId));
+    if (!currentUser) return;
+    try {
+      const res  = await fetch(`${API_URL}/messages?room=${currentRoom}`);
+      const data = await res.json();
+      if (!data.messages || data.messages.length === 0) return;
 
-    let newMsgs = false;
-    data.messages.forEach(m => {
-      if (!existingIds.has(m.messageId) && m.sender !== currentUser.username) {
-        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        renderMessage(m.sender, m.senderName, m.text, time, false, m.avatar, m.color);
-        existing.push({ ...m, time });
-        newMsgs = true;
-      }
-    });
+      // ✅ FIX: localStorage ke IDs ki jagah DOM pe rendered message IDs check karo
+      // Isse doosre users ke messages bhi correctly aayenge
+      const renderedIds = new Set(
+        Array.from(document.querySelectorAll(".msg-row[data-msg-id]"))
+             .map(el => el.dataset.msgId)
+             .filter(Boolean)
+      );
 
-    if (newMsgs) {
-      saveRoomMessages(currentRoom, existing);
-      scrollBottom();
+      let hasNew = false;
+
+      data.messages.forEach(m => {
+        if (!renderedIds.has(m.messageId)) {
+          const isSent = m.sender === currentUser.username;
+          const time   = m.time || new Date(m.timestamp).toLocaleTimeString([], {
+            hour: "2-digit", minute: "2-digit"
+          });
+          renderMessage(m.sender, m.senderName, m.text, time, isSent, m.avatar, m.color, m.messageId);
+          hasNew = true;
+
+          // localStorage mein bhi save karo
+          const local = getRoomMessages(currentRoom);
+          if (!local.find(x => x.messageId === m.messageId)) {
+            local.push({ ...m, time });
+            saveRoomMessages(currentRoom, local);
+          }
+        }
+      });
+
+      if (hasNew) scrollBottom();
+
+    } catch (err) {
+      console.warn("Polling error:", err);
     }
-  } catch (err) {
-    console.warn("Polling error:", err);
-  }
-}, 3000);
+  }, 3000);
+
 });
